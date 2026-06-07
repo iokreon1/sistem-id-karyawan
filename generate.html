@@ -108,7 +108,7 @@
             if (!nrp) return;
 
             // Generate target URL
-            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const baseUrl = window.location.origin;
             const targetUrl = `${baseUrl}/detail.html?nrp=${encodeURIComponent(nrp)}`;
 
             // Clear previous QR Code if exists
