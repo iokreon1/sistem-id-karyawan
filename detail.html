@@ -226,7 +226,7 @@
             document.getElementById('profilJabatan').textContent = data.jabatan || '-';
             
             // Handle foto
-            const fotoUrl = data.foto_url ? data.foto_url : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap || 'User')}&background=1b5e20&color=fff&size=200`;
+            const fotoUrl = data.foto ? data.foto : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap || 'User')}&background=1b5e20&color=fff&size=200`;
             document.getElementById('profilFoto').src = fotoUrl;
 
             // Populate Kompetensi

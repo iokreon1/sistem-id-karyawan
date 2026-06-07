@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin KPP Mining - Sistem Profil & Kompetensi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- QRCode JS (for displaying QR in modal) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#1b5e20',
+                            light: '#4c8c4a',
+                            dark: '#003300'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col text-slate-800">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-[9999] space-y-3 pointer-events-none"></div>
+
+    <!-- ================= AUTH GATE PANEL ================= -->
+    <div id="authGate" class="flex-grow flex items-center justify-center px-4 py-12 bg-gradient-to-tr from-brand-dark via-emerald-900 to-slate-900">
+        <div class="max-w-md w-full glass rounded-3xl shadow-2xl p-8 space-y-6 border border-white/20">
+            <div class="text-center">
+                <div class="mx-auto w-16 h-16 bg-brand-green text-white rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-brand-green/20">
+                    <i class="fa-solid fa-user-lock text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Dashboard Admin</h2>
+                <p class="text-slate-500 text-sm mt-1">Silakan masuk menggunakan akun Supabase Auth Anda</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Email</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input id="email" type="email" required class="w-full pl-10 pr-4 py-3 bg-white/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition" placeholder="admin@kppmining.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input id="password" type="password" required class="w-full pl-10 pr-4 py-3 bg-white/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnLoginSubmit" class="w-full py-3 bg-brand-green text-white rounded-xl font-bold hover:bg-brand-dark focus:ring-4 focus:ring-brand-green/20 transition duration-200 shadow-lg shadow-brand-green/10">
+                    Masuk
+                </button>
+            </form>
+
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-slate-200"></span></div>
+                <div class="relative flex justify-center text-xs uppercase"><span class="bg-white/80 px-3 text-slate-500 font-medium">Atau</span></div>
+            </div>
+
+            <!-- Bypass Auth Button -->
+            <div class="text-center">
+                <button type="button" id="btnBypass" class="text-sm font-semibold text-brand-green hover:text-brand-dark hover:underline transition">
+                    <i class="fa-solid fa-flask mr-1.5"></i> Bypass Login (Mode Pengujian)
+                </button>
+                <p class="text-[10px] text-slate-500 mt-2">Gunakan jika Anda belum mengatur akun Supabase Auth atau ingin mencoba CRUD secara langsung dengan kebijakan RLS dinonaktifkan.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DASHBOARD CORE APP (Hidden initially) ================= -->
+    <div id="dashboardApp" class="hidden flex-col flex-grow">
+        <!-- Top Navigation -->
+        <header class="bg-slate-900 text-white shadow-md">
+            <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-helmet-safety text-2xl text-emerald-400"></i>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight">KPP Mining Admin</h1>
+                        <p class="text-[10px] text-slate-400">Sistem Profil & Kompetensi</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <p id="adminEmail" class="text-xs font-semibold text-slate-300">Admin Mode</p>
+                        <span id="authBadge" class="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-slate-900">Bypass</span>
+                    </div>
+                    <a href="index.html" class="px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition flex items-center">
+                        <i class="fa-solid fa-house mr-1"></i> Home
+                    </a>
+                    <button id="btnLogout" class="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition flex items-center">
+                        <i class="fa-solid fa-sign-out mr-1"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard View -->
+        <main class="container mx-auto px-4 py-8 max-w-6xl flex-grow space-y-6">
+            
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl flex-shrink-0">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Karyawan</p>
+                        <h3 id="statTotalKaryawan" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl flex-shrink-0">
+                        <i class="fa-solid fa-certificate"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Sertifikasi</p>
+                        <h3 id="statTotalSertifikasi" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl flex-shrink-0">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Status Aktif</p>
+                        <h3 id="statSertifikasiAktif" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl flex-shrink-0">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Expired / Pending</p>
+                        <h3 id="statSertifikasiExpired" class="text-2xl font-bold text-slate-900">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+                    <div class="relative flex-grow max-w-md">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input id="searchInput" type="text" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition text-sm bg-white" placeholder="Cari NRP atau Nama Karyawan...">
+                    </div>
+                    
+                    <button id="btnTambahKaryawan" class="px-5 py-2.5 bg-brand-green hover:bg-brand-dark text-white rounded-xl font-bold text-sm shadow-md shadow-brand-green/10 transition flex items-center justify-center">
+                        <i class="fa-solid fa-user-plus mr-2"></i> Tambah Karyawan Baru
+                    </button>
+                </div>
+
+                <!-- Employees Table Wrapper -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-100">
+                                <th class="p-4 font-semibold text-center w-16">Foto</th>
+                                <th class="p-4 font-semibold">NRP</th>
+                                <th class="p-4 font-semibold">Nama Lengkap</th>
+                                <th class="p-4 font-semibold">Departemen</th>
+                                <th class="p-4 font-semibold">Jabatan</th>
+                                <th class="p-4 font-semibold text-center">Kompetensi</th>
+                                <th class="p-4 font-semibold text-center w-36">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <tr>
+                                <td colspan="7" class="p-8 text-center text-slate-400">
+                                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-brand-green"></i>
+                                    <p>Memuat data karyawan...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyTableState" class="hidden p-12 text-center text-slate-400">
+                    <i class="fa-solid fa-user-slash text-4xl mb-3 text-slate-300"></i>
+                    <h4 class="font-bold text-slate-700 text-lg">Tidak Ada Data Karyawan</h4>
+                    <p class="text-sm mt-1">Silakan tambahkan data karyawan baru atau sesuaikan filter pencarian Anda.</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="bg-slate-800 text-slate-400 py-4 text-center text-xs border-t border-slate-700">
+            <p>&copy; <span id="year"></span> KPP Mining Admin Panel. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- ================= MODAL FORM: TAMBAH / EDIT KARYAWAN ================= -->
+    <div id="karyawanModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-300 border border-slate-100">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-950 text-white flex items-center justify-between">
+                <h3 id="modalTitle" class="text-base font-bold flex items-center">
+                    <i class="fa-solid fa-user-pen mr-2 text-emerald-400"></i> Edit Data Karyawan
+                </h3>
+                <button id="btnCancelModal" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Form) -->
+            <form id="karyawanForm" class="flex-grow overflow-y-auto p-6 space-y-6">
+                <!-- Hidden action field to distinguish insert vs update -->
+                <input type="hidden" id="formAction" value="insert">
+
+                <!-- Section 1: Biodata -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2 mb-4">1. Biodata Utama</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="formNrp" class="block text-xs font-semibold text-slate-600 mb-1">NRP <span class="text-red-500">*</span></label>
+                            <input id="formNrp" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-sm" placeholder="Contoh: KB25024">
+                            <p class="text-[10px] text-slate-400 mt-1">NRP berfungsi sebagai Primary Key unik dan tidak bisa diubah saat mode Edit.</p>
+                        </div>
+                        
+                        <div>
+                            <label for="formNama" class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                            <input id="formNama" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-sm" placeholder="Contoh: Budi Santoso">
+                        </div>
+
+                        <div>
+                            <label for="formDept" class="block text-xs font-semibold text-slate-600 mb-1">Departemen</label>
+                            <input id="formDept" type="text" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-sm" placeholder="Contoh: Production">
+                        </div>
+
+                        <div>
+                            <label for="formJabatan" class="block text-xs font-semibold text-slate-600 mb-1">Jabatan</label>
+                            <input id="formJabatan" type="text" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-sm" placeholder="Contoh: Operator PC400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Foto Profil -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2 mb-4">2. Foto Profil Karyawan</h4>
+                    
+                    <div class="flex flex-col sm:flex-row items-center gap-6">
+                        <!-- Preview Box -->
+                        <div class="relative w-28 h-28 rounded-full border-4 border-slate-100 shadow-inner overflow-hidden bg-slate-50 flex items-center justify-center flex-shrink-0">
+                            <img id="formFotoPreview" src="https://ui-avatars.com/api/?name=User&background=1b5e20&color=fff&size=200" alt="Preview Foto" class="w-full h-full object-cover">
+                            <div id="uploadingOverlay" class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white hidden">
+                                <i class="fa-solid fa-spinner fa-spin text-lg mb-1"></i>
+                                <span class="text-[9px]">Uploading...</span>
+                            </div>
+                        </div>
+
+                        <!-- Upload Controls -->
+                        <div class="flex-grow w-full space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Unggah Berkas Foto (Supabase Storage)</label>
+                                <input id="formFotoFile" type="file" accept="image/*" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-brand-green hover:file:bg-green-100 transition">
+                            </div>
+                            
+                            <div class="relative flex items-center">
+                                <div class="flex-grow border-t border-slate-200"></div>
+                                <span class="flex-shrink mx-4 text-[10px] text-slate-400 uppercase font-semibold">Atau URL Foto Langsung</span>
+                                <div class="flex-grow border-t border-slate-200"></div>
+                            </div>
+
+                            <div>
+                                <input id="formFotoUrl" type="url" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-xs" placeholder="https://contoh.com/foto.jpg">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Kompetensi Dinamis -->
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">3. Matriks Kompetensi & Lisensi</h4>
+                        <button type="button" id="btnAddKompetensiRow" class="text-xs font-bold text-brand-green hover:text-brand-dark flex items-center transition">
+                            <i class="fa-solid fa-plus-circle mr-1"></i> Tambah Baris
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-2 font-semibold">Nama Unit / Alat</th>
+                                    <th class="p-2 font-semibold w-36">Status</th>
+                                    <th class="p-2 font-semibold w-40">Masa Berlaku</th>
+                                    <th class="p-2 font-semibold text-center w-10">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="formKompetensiBody" class="divide-y divide-slate-100">
+                                <!-- Dynamic rows inserted by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="formEmptyKompetensi" class="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 mt-2">
+                        <i class="fa-regular fa-folder-open text-2xl mb-1 text-slate-300"></i>
+                        <p class="text-xs">Belum ada kompetensi terdaftar. Klik "+ Tambah Baris" untuk menambahkan.</p>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <button type="button" id="btnCloseModal" class="px-4 py-2 border border-slate-200 text-slate-500 font-bold text-xs rounded-xl hover:bg-slate-100 transition">Batal</button>
+                <button type="submit" form="karyawanForm" id="btnSaveKaryawan" class="px-5 py-2 bg-brand-green hover:bg-brand-dark text-white font-bold text-xs rounded-xl shadow-md shadow-brand-green/10 transition flex items-center">
+                    <i class="fa-solid fa-circle-check mr-1.5"></i> Simpan Data Karyawan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: DETAIL QR CODE ================= -->
+    <div id="qrModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="px-6 py-4 bg-brand-green text-white flex items-center justify-between">
+                <h3 class="font-bold flex items-center text-sm">
+                    <i class="fa-solid fa-qrcode mr-2"></i> QR Code Karyawan
+                </h3>
+                <button id="btnCancelQrModal" class="text-green-100 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-8 flex flex-col items-center text-center space-y-4">
+                <p id="qrModalName" class="font-bold text-slate-800 text-lg">Nama Karyawan</p>
+                <p id="qrModalNrp" class="text-xs font-semibold text-brand-green tracking-wider bg-green-50 px-3 py-1 rounded-full">-</p>
+                
+                <!-- QR Code Box -->
+                <div class="p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-sm inline-block">
+                    <div id="qrCodeContainer"></div>
+                </div>
+                
+                <p class="text-[10px] text-slate-400 max-w-xs">Scan QR Code ini menggunakan kamera scanner untuk menuju langsung ke halaman detail profil dan kompetensi.</p>
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-center">
+                <button id="btnPrintQr" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition flex items-center">
+                    <i class="fa-solid fa-print mr-1.5"></i> Cetak QR Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= JAVASCRIPT BUSINESS LOGIC ================= -->
+    <script type="module">
+        import supabase from './js/supabase-client.js';
+
+        // State variables
+        let isBypassMode = false;
+        let allKaryawan = [];
+        let sessionUser = null;
+
+        // DOM Elements
+        const authGate = document.getElementById('authGate');
+        const dashboardApp = document.getElementById('dashboardApp');
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const btnBypass = document.getElementById('btnBypass');
+        const btnLogout = document.getElementById('btnLogout');
+        const adminEmail = document.getElementById('adminEmail');
+        const authBadge = document.getElementById('authBadge');
+        
+        // Table & Dashboard DOM Elements
+        const employeeTableBody = document.getElementById('employeeTableBody');
+        const emptyTableState = document.getElementById('emptyTableState');
+        const searchInput = document.getElementById('searchInput');
+        const btnTambahKaryawan = document.getElementById('btnTambahKaryawan');
+        const yearSpan = document.getElementById('year');
+
+        // Modal Karyawan DOM Elements
+        const karyawanModal = document.getElementById('karyawanModal');
+        const karyawanForm = document.getElementById('karyawanForm');
+        const formAction = document.getElementById('formAction');
+        const modalTitle = document.getElementById('modalTitle');
+        const formNrp = document.getElementById('formNrp');
+        const formNama = document.getElementById('formNama');
+        const formDept = document.getElementById('formDept');
+        const formJabatan = document.getElementById('formJabatan');
+        const formFotoPreview = document.getElementById('formFotoPreview');
+        const formFotoFile = document.getElementById('formFotoFile');
+        const formFotoUrl = document.getElementById('formFotoUrl');
+        const formKompetensiBody = document.getElementById('formKompetensiBody');
+        const formEmptyKompetensi = document.getElementById('formEmptyKompetensi');
+        const btnAddKompetensiRow = document.getElementById('btnAddKompetensiRow');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const btnCancelModal = document.getElementById('btnCancelModal');
+        const uploadingOverlay = document.getElementById('uploadingOverlay');
+
+        // QR Modal DOM Elements
+        const qrModal = document.getElementById('qrModal');
+        const qrModalName = document.getElementById('qrModalName');
+        const qrModalNrp = document.getElementById('qrModalNrp');
+        const qrCodeContainer = document.getElementById('qrCodeContainer');
+        const btnCancelQrModal = document.getElementById('btnCancelQrModal');
+        const btnPrintQr = document.getElementById('btnPrintQr');
+        let qrCodeInstance = null;
+
+        // Set current year
+        yearSpan.textContent = new Date().getFullYear();
+
+        // ------------------ TOAST NOTIFICATIONS ------------------
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            toast.className = `p-4 rounded-xl shadow-xl flex items-center space-x-3 border text-sm font-semibold transition-all duration-300 translate-x-10 opacity-0 pointer-events-auto max-w-sm`;
+            
+            let bgClass, borderClass, textClass, iconClass;
+            if (type === 'success') {
+                bgClass = 'bg-emerald-50';
+                borderClass = 'border-emerald-200';
+                textClass = 'text-emerald-800';
+                iconClass = 'fa-circle-check text-emerald-500';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-50';
+                borderClass = 'border-red-200';
+                textClass = 'text-red-800';
+                iconClass = 'fa-circle-xmark text-red-500';
+            } else {
+                bgClass = 'bg-blue-50';
+                borderClass = 'border-blue-200';
+                textClass = 'text-blue-800';
+                iconClass = 'fa-circle-info text-blue-500';
+            }
+            
+            toast.className += ` ${bgClass} ${borderClass} ${textClass}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg flex-shrink-0"></i>
+                <div class="flex-grow">${message}</div>
+                <button class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-x-10', 'opacity-0');
+            }, 10);
+            
+            // Auto close after 4 seconds
+            const autoClose = setTimeout(() => {
+                closeToast(toast);
+            }, 4000);
+            
+            // Close button listener
+            toast.querySelector('button').addEventListener('click', () => {
+                clearTimeout(autoClose);
+                closeToast(toast);
+            });
+        }
+
+        function closeToast(toast) {
+            toast.classList.add('translate-x-10', 'opacity-0');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+
+        // ------------------ AUTHENTICATION LOGIC ------------------
+        async function checkAuthState() {
+            // Check if bypass mode is on in localStorage
+            if (localStorage.getItem('admin_bypass') === 'true') {
+                isBypassMode = true;
+                showDashboard();
+                return;
+            }
+
+            // Check Supabase session
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (session) {
+                    sessionUser = session.user;
+                    isBypassMode = false;
+                    showDashboard();
+                } else {
+                    showAuthGate();
+                }
+            } catch (err) {
+                console.error("Auth state check error:", err);
+                showAuthGate();
+            }
+        }
+
+        function showAuthGate() {
+            authGate.classList.remove('hidden');
+            authGate.classList.add('flex');
+            dashboardApp.classList.add('hidden');
+            dashboardApp.classList.remove('flex');
+        }
+
+        function showDashboard() {
+            authGate.classList.add('hidden');
+            authGate.classList.remove('flex');
+            dashboardApp.classList.remove('hidden');
+            dashboardApp.classList.add('flex');
+
+            if (isBypassMode) {
+                adminEmail.textContent = "Mode Pengujian (Bypass)";
+                authBadge.textContent = "Bypass";
+                authBadge.className = "inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-slate-900";
+            } else {
+                adminEmail.textContent = sessionUser ? sessionUser.email : "Authenticated Admin";
+                authBadge.textContent = "Secure";
+                authBadge.className = "inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-600 text-white";
+            }
+
+            loadEmployees();
+        }
+
+        // Handle login submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            const btnSubmit = document.getElementById('btnLoginSubmit');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Memproses...`;
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                
+                if (error) throw error;
+                
+                showToast("Berhasil masuk!", "success");
+                localStorage.removeItem('admin_bypass');
+                sessionUser = data.user;
+                isBypassMode = false;
+                showDashboard();
+            } catch (err) {
+                console.error("Login error:", err);
+                showToast("Gagal masuk: " + err.message, "error");
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = "Masuk";
+            }
+        });
+
+        // Handle bypass action
+        btnBypass.addEventListener('click', () => {
+            localStorage.setItem('admin_bypass', 'true');
+            isBypassMode = true;
+            showToast("Bypass Auth diaktifkan! Menjalankan mode pengujian.", "info");
+            showDashboard();
+        });
+
+        // Handle logout action
+        btnLogout.addEventListener('click', async () => {
+            if (isBypassMode) {
+                localStorage.removeItem('admin_bypass');
+                isBypassMode = false;
+                showToast("Bypass Auth dimatikan. Keluar dari sistem.", "info");
+                showAuthGate();
+            } else {
+                try {
+                    const { error } = await supabase.auth.signOut();
+                    if (error) throw error;
+                    sessionUser = null;
+                    showToast("Berhasil keluar dari dashboard.", "success");
+                    showAuthGate();
+                } catch (err) {
+                    console.error("Logout error:", err);
+                    showToast("Gagal logout: " + err.message, "error");
+                }
+            }
+        });
+
+        // ------------------ CRUD: LOAD EMPLOYEES & COMPUTE STATS ------------------
+        async function loadEmployees() {
+            employeeTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-brand-green"></i>
+                        <p>Mengambil data dari Supabase...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                // Fetch data dari Supabase
+                const { data, error } = await supabase
+                    .from('karyawan')
+                    .select('*, karyawan_kompetensi(*)')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                allKaryawan = data || [];
+                renderTable(allKaryawan);
+                calculateStats(allKaryawan);
+
+            } catch (err) {
+                console.error("Load employees error:", err);
+                showToast("Gagal memuat data: " + err.message, "error");
+                
+                employeeTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-red-500 font-medium">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+                            <p>Error Supabase: ${err.message}</p>
+                            <button id="btnRetryLoad" class="mt-3 px-4 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold transition">Coba Lagi</button>
+                        </td>
+                    </tr>
+                `;
+                
+                document.getElementById('btnRetryLoad')?.addEventListener('click', loadEmployees);
+            }
+        }
+
+        function calculateStats(employees) {
+            document.getElementById('statTotalKaryawan').textContent = employees.length;
+            
+            let totalSertifikat = 0;
+            let sertifikatAktif = 0;
+            let sertifikatExpired = 0;
+
+            employees.forEach(emp => {
+                if (emp.karyawan_kompetensi) {
+                    totalSertifikat += emp.karyawan_kompetensi.length;
+                    emp.karyawan_kompetensi.forEach(komp => {
+                        const status = (komp.status || '').toLowerCase();
+                        if (status === 'aktif' || status === 'valid') {
+                            sertifikatAktif++;
+                        } else {
+                            sertifikatExpired++;
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('statTotalSertifikasi').textContent = totalSertifikat;
+            document.getElementById('statSertifikasiAktif').textContent = sertifikatAktif;
+            document.getElementById('statSertifikasiExpired').textContent = sertifikatExpired;
+        }
+
+        function renderTable(employees) {
+            employeeTableBody.innerHTML = '';
+            
+            if (employees.length === 0) {
+                emptyTableState.classList.remove('hidden');
+                return;
+            }
+            emptyTableState.classList.add('hidden');
+
+            employees.forEach(emp => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition duration-150";
+
+                // Foto handling
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.nama_lengkap || 'User')}&background=1b5e20&color=fff&size=200`;
+                const avatarSrc = emp.foto ? emp.foto : fallbackAvatar;
+
+                // Kompetensi count
+                const kompetensiCount = emp.karyawan_kompetensi ? emp.karyawan_kompetensi.length : 0;
+
+                tr.innerHTML = `
+                    <td class="p-4 text-center">
+                        <img src="${avatarSrc}" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-slate-200 mx-auto bg-white">
+                    </td>
+                    <td class="p-4 font-mono font-semibold text-brand-green select-all">${emp.nrp || '-'}</td>
+                    <td class="p-4 font-semibold text-slate-900">${emp.nama_lengkap || '-'}</td>
+                    <td class="p-4 text-slate-500">${emp.departemen || '-'}</td>
+                    <td class="p-4 text-slate-500">${emp.jabatan || '-'}</td>
+                    <td class="p-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${kompetensiCount > 0 ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'}">
+                            ${kompetensiCount} Unit
+                        </span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center space-x-1.5">
+                            <button title="Lihat QR Code" class="btn-qr-action p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" data-nrp="${emp.nrp}" data-nama="${emp.nama_lengkap}">
+                                <i class="fa-solid fa-qrcode text-base"></i>
+                            </button>
+                            <button title="Ubah Data" class="btn-edit-action p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" data-nrp="${emp.nrp}">
+                                <i class="fa-solid fa-user-pen text-base"></i>
+                            </button>
+                            <button title="Hapus Karyawan" class="btn-delete-action p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition" data-nrp="${emp.nrp}" data-nama="${emp.nama_lengkap}">
+                                <i class="fa-solid fa-trash-can text-base"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                employeeTableBody.appendChild(tr);
+            });
+
+            // Bind Table Action Event Listeners
+            document.querySelectorAll('.btn-qr-action').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const el = e.currentTarget;
+                    openQrModal(el.getAttribute('data-nrp'), el.getAttribute('data-nama'));
+                });
+            });
+
+            document.querySelectorAll('.btn-edit-action').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    openEditModal(e.currentTarget.getAttribute('data-nrp'));
+                });
+            });
+
+            document.querySelectorAll('.btn-delete-action').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const el = e.currentTarget;
+                    deleteEmployee(el.getAttribute('data-nrp'), el.getAttribute('data-nama'));
+                });
+            });
+        }
+
+        // Live search filter
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const filtered = allKaryawan.filter(emp => {
+                return (
+                    (emp.nama_lengkap || '').toLowerCase().includes(query) ||
+                    (emp.nrp || '').toLowerCase().includes(query) ||
+                    (emp.departemen || '').toLowerCase().includes(query) ||
+                    (emp.jabatan || '').toLowerCase().includes(query)
+                );
+            });
+            renderTable(filtered);
+        });
+
+        // ------------------ CRUD: DELETE LOGIC ------------------
+        async function deleteEmployee(nrp, nama) {
+            const confirmMsg = `Apakah Anda yakin ingin menghapus data karyawan "${nama}" (${nrp})?\n\nPERINGATAN: Seluruh data riwayat kompetensi dan lisensi karyawan ini juga akan terhapus secara permanen.`;
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                // Hapus kompetensi terlebih dahulu (menghindari error foreign key constraint jika ON DELETE CASCADE tidak aktif)
+                const { error: kompError } = await supabase
+                    .from('karyawan_kompetensi')
+                    .delete()
+                    .eq('nrp_karyawan', nrp);
+
+                if (kompError) throw kompError;
+
+                // Hapus karyawan
+                const { error: karyError } = await supabase
+                    .from('karyawan')
+                    .delete()
+                    .eq('nrp', nrp);
+
+                if (karyError) throw karyError;
+
+                showToast(`Data karyawan "${nama}" berhasil dihapus.`, "success");
+                loadEmployees();
+
+            } catch (err) {
+                console.error("Delete employee error:", err);
+                showToast("Gagal menghapus data: " + err.message, "error");
+            }
+        }
+
+        // ------------------ CRUD: FORM & MODAL HANDLERS ------------------
+        function openModal() {
+            karyawanModal.classList.remove('hidden');
+            setTimeout(() => {
+                karyawanModal.classList.remove('opacity-0');
+                karyawanModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            karyawanModal.classList.add('opacity-0');
+            karyawanModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                karyawanModal.classList.add('hidden');
+                // Clean form state
+                karyawanForm.reset();
+                formFotoPreview.src = "https://ui-avatars.com/api/?name=User&background=1b5e20&color=fff&size=200";
+                formKompetensiBody.innerHTML = '';
+                toggleEmptyKompetensi();
+            }, 300);
+        }
+
+        btnCloseModal.addEventListener('click', closeModal);
+        btnCancelModal.addEventListener('click', closeModal);
+
+        // Tambah Karyawan (New mode)
+        btnTambahKaryawan.addEventListener('click', () => {
+            formAction.value = 'insert';
+            modalTitle.innerHTML = `<i class="fa-solid fa-user-plus mr-2 text-emerald-400"></i> Tambah Karyawan Baru`;
+            formNrp.readOnly = false;
+            formNrp.className = "w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-green text-sm";
+            
+            // Clean states
+            karyawanForm.reset();
+            formFotoPreview.src = `https://ui-avatars.com/api/?name=User&background=1b5e20&color=fff&size=200`;
+            formKompetensiBody.innerHTML = '';
+            toggleEmptyKompetensi();
+            
+            openModal();
+        });
+
+        // Edit Karyawan (Edit mode)
+        function openEditModal(nrp) {
+            const emp = allKaryawan.find(e => e.nrp === nrp);
+            if (!emp) return;
+
+            formAction.value = 'update';
+            modalTitle.innerHTML = `<i class="fa-solid fa-user-pen mr-2 text-emerald-400"></i> Edit Data Karyawan`;
+            
+            // NRP readonly
+            formNrp.value = emp.nrp;
+            formNrp.readOnly = true;
+            formNrp.className = "w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-slate-100 text-slate-500 cursor-not-allowed";
+
+            formNama.value = emp.nama_lengkap || '';
+            formDept.value = emp.departemen || '';
+            formJabatan.value = emp.jabatan || '';
+            formFotoUrl.value = emp.foto || '';
+
+            // Handle preview
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.nama_lengkap || 'User')}&background=1b5e20&color=fff&size=200`;
+            formFotoPreview.src = emp.foto ? emp.foto : fallbackAvatar;
+
+            // Load kompetensi
+            formKompetensiBody.innerHTML = '';
+            if (emp.karyawan_kompetensi && emp.karyawan_kompetensi.length > 0) {
+                emp.karyawan_kompetensi.forEach(komp => {
+                    addKompetensiRow(komp.nama_unit, komp.status, komp.masa_berlaku);
+                });
+            }
+            
+            toggleEmptyKompetensi();
+            openModal();
+        }
+
+        // Live preview on nama_lengkap change (for ui-avatars placeholder)
+        formNama.addEventListener('input', (e) => {
+            if (!formFotoUrl.value && !formFotoFile.value) {
+                const name = e.target.value.trim() || 'User';
+                formFotoPreview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1b5e20&color=fff&size=200`;
+            }
+        });
+
+        // Live preview on manual URL change
+        formFotoUrl.addEventListener('input', (e) => {
+            const url = e.target.value.trim();
+            if (url) {
+                formFotoPreview.src = url;
+            } else {
+                const name = formNama.value.trim() || 'User';
+                formFotoPreview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1b5e20&color=fff&size=200`;
+            }
+        });
+
+        // ------------------ PHOTO UPLOAD LOGIC ------------------
+        formFotoFile.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Preview local image first
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                formFotoPreview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Get NRP for file naming
+            const nrp = formNrp.value.trim();
+            if (!nrp) {
+                showToast("Harap isi NRP terlebih dahulu sebelum mengunggah foto profil.", "error");
+                formFotoFile.value = ''; // Reset uploader
+                return;
+            }
+
+            uploadingOverlay.classList.remove('hidden');
+
+            try {
+                // Sanitize file extension
+                const extension = file.name.split('.').pop();
+                const fileName = `${nrp.toUpperCase()}_${Date.now()}.${extension}`;
+                const filePath = `profil/${fileName}`;
+
+                // Upload file to Supabase Storage
+                // Kita asumsikan ada bucket bernama "karyawan-foto"
+                const { data, error } = await supabase.storage
+                    .from('karyawan-foto')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
+                if (error) throw error;
+
+                // Get Public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('karyawan-foto')
+                    .getPublicUrl(filePath);
+
+                formFotoUrl.value = publicUrl;
+                formFotoPreview.src = publicUrl;
+                showToast("Foto profil berhasil diunggah!", "success");
+
+            } catch (err) {
+                console.error("Upload error:", err);
+                showToast("Gagal mengunggah foto ke Storage Supabase. Silakan masukkan tautan foto secara manual di kolom URL.", "error");
+                // Reset file input
+                formFotoFile.value = '';
+            } finally {
+                uploadingOverlay.classList.add('hidden');
+            }
+        });
+
+        // ------------------ DYNAMIC COMPETENCIES TABLE ------------------
+        function toggleEmptyKompetensi() {
+            if (formKompetensiBody.children.length === 0) {
+                formEmptyKompetensi.classList.remove('hidden');
+            } else {
+                formEmptyKompetensi.classList.add('hidden');
+            }
+        }
+
+        function addKompetensiRow(namaUnit = '', status = 'Aktif', masaBerlaku = '-') {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition";
+
+            tr.innerHTML = `
+                <td class="p-2">
+                    <input type="text" required class="comp-nama-unit w-full px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-green" placeholder="Contoh: LV Cruiser, PC400" value="${namaUnit}">
+                </td>
+                <td class="p-2">
+                    <select class="comp-status w-full px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-green">
+                        <option value="Aktif" ${status === 'Aktif' || status === 'Valid' ? 'selected' : ''}>Aktif</option>
+                        <option value="Expired" ${status === 'Expired' || status === 'Tidak Valid' ? 'selected' : ''}>Expired</option>
+                        <option value="Training" ${status === 'Training' || status === 'Pending' ? 'selected' : ''}>Training</option>
+                    </select>
+                </td>
+                <td class="p-2">
+                    <input type="text" class="comp-masa-berlaku w-full px-2 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-green" placeholder="Contoh: 12 Desember 2026 atau -" value="${masaBerlaku}">
+                </td>
+                <td class="p-2 text-center">
+                    <button type="button" class="btn-delete-row text-red-500 hover:text-red-700 transition p-1">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            formKompetensiBody.appendChild(tr);
+            toggleEmptyKompetensi();
+
+            // Bind remove row button
+            tr.querySelector('.btn-delete-row').addEventListener('click', () => {
+                tr.remove();
+                toggleEmptyKompetensi();
+            });
+        }
+
+        btnAddKompetensiRow.addEventListener('click', () => {
+            addKompetensiRow('', 'Aktif', '-');
+        });
+
+        // ------------------ CRUD: SUBMIT SAVE FORM ------------------
+        karyawanForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const action = formAction.value;
+            const nrp = formNrp.value.trim().toUpperCase();
+            const nama = formNama.value.trim();
+            const dept = formDept.value.trim();
+            const jabatan = formJabatan.value.trim();
+            const foto = formFotoUrl.value.trim();
+
+            const btnSave = document.getElementById('btnSaveKaryawan');
+            btnSave.disabled = true;
+            btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Menyimpan...`;
+
+            try {
+                // 1. Validasi NRP saat Insert mode agar tidak duplikat
+                if (action === 'insert') {
+                    const { data: existing, error: checkError } = await supabase
+                        .from('karyawan')
+                        .select('nrp')
+                        .eq('nrp', nrp)
+                        .maybeSingle();
+
+                    if (checkError) throw checkError;
+                    if (existing) {
+                        throw new Error(`Karyawan dengan NRP "${nrp}" sudah terdaftar di database! Gunakan NRP lain atau edit data yang sudah ada.`);
+                    }
+                }
+
+                // 2. Simpan atau Update Karyawan ke Supabase
+                const employeePayload = {
+                    nrp: nrp,
+                    nama_lengkap: nama,
+                    departemen: dept || null,
+                    jabatan: jabatan || null,
+                    foto: foto || null
+                };
+
+                let saveError;
+                if (action === 'insert') {
+                    const { error } = await supabase
+                        .from('karyawan')
+                        .insert([employeePayload]);
+                    saveError = error;
+                } else {
+                    const { error } = await supabase
+                        .from('karyawan')
+                        .update(employeePayload)
+                        .eq('nrp', nrp);
+                    saveError = error;
+                }
+
+                if (saveError) throw saveError;
+
+                // 3. Simpan Kompetensi Terkait
+                // Kita gunakan teknik termudah & terbersih untuk vanilla CRUD:
+                // Hapus semua kompetensi lama milik NRP ini, lalu masukkan kompetensi baru yang ada di form
+                const { error: clearError } = await supabase
+                    .from('karyawan_kompetensi')
+                    .delete()
+                    .eq('nrp_karyawan', nrp);
+
+                if (clearError) throw clearError;
+
+                // Tarik baris kompetensi dari DOM
+                const compRows = formKompetensiBody.querySelectorAll('tr');
+                if (compRows.length > 0) {
+                    const competenciesPayload = [];
+                    compRows.forEach(row => {
+                        const compNama = row.querySelector('.comp-nama-unit').value.trim();
+                        const compStat = row.querySelector('.comp-status').value;
+                        const compMasa = row.querySelector('.comp-masa-berlaku').value.trim();
+
+                        if (compNama) {
+                            competenciesPayload.push({
+                                nrp_karyawan: nrp,
+                                nama_unit: compNama,
+                                status: compStat,
+                                masa_berlaku: compMasa || '-'
+                            });
+                        }
+                    });
+
+                    if (competenciesPayload.length > 0) {
+                        const { error: insertKompError } = await supabase
+                            .from('karyawan_kompetensi')
+                            .insert(competenciesPayload);
+
+                        if (insertKompError) throw insertKompError;
+                    }
+                }
+
+                // 4. Success handling
+                showToast(`Data karyawan "${nama}" berhasil disimpan!`, "success");
+                closeModal();
+                loadEmployees();
+
+            } catch (err) {
+                console.error("Save employee error:", err);
+                showToast("Gagal menyimpan data: " + err.message, "error");
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Simpan Data Karyawan`;
+            }
+        });
+
+        // ------------------ QR CODE MODAL LOGIC ------------------
+        function openQrModal(nrp, nama) {
+            qrModalName.textContent = nama || 'Karyawan';
+            qrModalNrp.textContent = nrp || '-';
+            qrCodeContainer.innerHTML = ''; // Clean old code
+
+            // Generate full detail URL (based on current domain)
+            const detailUrl = `${window.location.origin}/detail.html?nrp=${nrp}`;
+
+            // Generate QR Code using qrcode.js
+            qrCodeInstance = new QRCode(qrCodeContainer, {
+                text: detailUrl,
+                width: 180,
+                height: 180,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            qrModal.classList.remove('hidden');
+            setTimeout(() => {
+                qrModal.classList.remove('opacity-0');
+                qrModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeQrModal() {
+            qrModal.classList.add('opacity-0');
+            qrModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                qrModal.classList.add('hidden');
+                qrCodeContainer.innerHTML = '';
+                qrCodeInstance = null;
+            }, 300);
+        }
+
+        btnCancelQrModal.addEventListener('click', closeQrModal);
+
+        // Print QR Code directly from modal
+        btnPrintQr.addEventListener('click', () => {
+            const qrImage = qrCodeContainer.querySelector('img');
+            if (!qrImage) {
+                showToast("QR Code belum tergenerasi sempurna.", "error");
+                return;
+            }
+
+            // Create a temporary window to print
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Cetak QR Code - ${qrModalName.textContent}</title>
+                    <style>
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            text-align: center;
+                            padding: 40px;
+                        }
+                        .container {
+                            border: 2px solid #ccc;
+                            border-radius: 20px;
+                            padding: 30px;
+                            display: inline-block;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                        }
+                        h2 { margin: 10px 0 5px 0; font-size: 24px; color: #333; }
+                        p { margin: 0 0 20px 0; font-size: 16px; font-weight: bold; color: #1b5e20; tracking-wider: 1px; }
+                        img { margin: 10px auto; display: block; }
+                        .footer { margin-top: 25px; font-size: 10px; color: #888; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>${qrModalName.textContent}</h2>
+                        <p>NRP. ${qrModalNrp.textContent}</p>
+                        <img src="${qrImage.src}" width="200" height="200" />
+                        <div class="footer">KPP Mining System &bull; QR Code Profil & Kompetensi</div>
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            window.close();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        });
+
+        // Initialize Authentication
+        checkAuthState();
+
+    </script>
+</body>
+</html>

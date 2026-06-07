@@ -28,7 +28,7 @@ Menyimpan biodata utama karyawan.
 * `nama_lengkap` (text)
 * `departemen` (text)
 * `jabatan` (text)
-* `foto_url` (text)
+* `foto` (text)
 * `created_at` (timestamptz)
 
 **Table 2: `karyawan_kompetensi`**
@@ -45,41 +45,64 @@ Menyimpan daftar sertifikasi/kompetensi.
 
 Aplikasi dipecah menjadi antarmuka yang modular agar fungsinya terisolasi dan spesifik.
 
-### A. `index.html` (Menu Utama)
+### A. Konfigurasi (`js/config.js` & `js/supabase-client.js`)
+* **Fungsi:** Mengisolasi kredensial dan inisialisasi koneksi database.
+* **Logic:** Menyimpan `SUPABASE_URL` dan `SUPABASE_ANON_KEY`, lalu mengekspor instance client Supabase untuk diimpor secara modular di halaman lain.
+
+### B. `index.html` (Menu Utama)
 
 * **Fungsi:** Halaman navigasi awal (Dashboard).
 * **UI:** Memiliki dua tombol utama. Tombol 1 mengarah ke `generate.html`. Tombol 2 mengarah ke `scanner.html`.
 
-### B. `generate.html` (QR Code Generator)
+### C. `generate.html` (QR Code Generator)
 
 * **Fungsi:** Form admin untuk membuat QR Code.
 * **Logic:**
   * Input text untuk memasukkan NRP.
-  * Saat tombol ditekan, buat URL dinamis: `[Base_URL]/detail.html?nrp=[NRP]`.
-  * Gunakan `qrcode.js` untuk merender URL tersebut menjadi gambar QR Code.
+  * Saat tombol ditekan, buat URL dinamis berbasis `window.location.origin` (menyesuaikan URL saat deploy di Vercel): `[Base_URL]/detail.html?nrp=[NRP]`.
+  * Gunakan `qrcode.js` untuk merender URL tersebut menjadi gambar QR Code. Konfigurasi diatur ke warna hitam pekat (`#000000`) dan *CorrectLevel* menengah (`M`) agar mudah dibaca oleh kamera buram.
 
-### C. `scanner.html` (Web QR Scanner)
+### D. `scanner.html` (Web QR Scanner)
 
 * **Fungsi:** Membaca QR Code langsung dari kamera perangkat.
 * **Logic:**
-  * Menggunakan `html5-qrcode` dengan konfigurasi kamera belakang (`facingMode: "environment"`).
-  * Saat scan berhasil, hentikan instance kamera.
-  * Redirect `window.location.href` ke string URL hasil scan.
+  * Menggunakan instance langsung `Html5Qrcode` (tanpa UI wrapper berlebih) dengan prioritas konfigurasi kamera belakang (`facingMode: "environment"`).
+  * Memiliki *fallback* ke kamera depan/default jika kamera belakang tidak ditemukan (seperti pada laptop).
+  * Saat scan berhasil, sistem memunculkan notifikasi sukses sesaat, mencoba menghentikan instance kamera, lalu memaksa redirect `window.location.href` ke string URL hasil scan.
 
-### D. `detail.html` (Profil & Kompetensi Karyawan)
+
+### E. `detail.html` (Profil & Kompetensi Karyawan)
 
 * **Fungsi:** Menampilkan data lengkap karyawan berdasarkan parameter URL.
 * **UI:** Desain card modern menggunakan Tailwind CSS (Warna utama: Brand Green `#1b5e20`). Terdiri dari Card Biodata dan Tabel Matriks Kompetensi.
 * **Logic:**
   * Parsing URL parameter untuk mendapatkan nilai `?nrp=`.
-  * Inisialisasi Supabase client.
+  * Mengimpor Supabase client secara dinamis dari `js/supabase-client.js`.
   * Fetch data tunggal (`.single()`) dari tabel `karyawan` dan lakukan *join* ke tabel `karyawan_kompetensi` menggunakan relasi Foreign Key.
-  * **Penting:** Jika foto tidak ada, gunakan avatar placeholder default.
+  * **Penanganan Error:** Jika data NRP tidak ada di database atau gagal dibaca karena RLS (mengembalikan error `PGRST116`), sistem akan menampilkan peringatan informatif langsung di UI.
+  * **Penting:** Jika foto tidak ada, gunakan avatar placeholder default (dikumpulkan via API `ui-avatars.com`).
   * Render data biodata ke elemen HTML spesifik (DOM manipulation).
   * Looping array dari relasi `karyawan_kompetensi` untuk merender baris (`<tr>`) pada tabel sertifikasi. Tampilkan pesan kosong jika tidak ada kompetensi.
 
+### F. `admin.html` (Dashboard Admin & CRUD)
+
+* **Fungsi:** Panel kontrol admin untuk mengelola (Tambah, Edit, Hapus) data karyawan dan matriks kompetensi secara langsung dari web.
+* **UI:** Dashboard bergaya portal admin modern (Warna utama: Slate & Emerald/Brand Green).
+* **Logic:**
+  * **Autentikasi:** Gate masuk menggunakan Supabase Auth (Email & Password). Menyediakan tombol "Bypass" untuk pengujian lokal/tanpa RLS.
+  * **Statistik Ringkas:** Menghitung total karyawan, total kompetensi terdaftar, kompetensi aktif, dan expired secara real-time.
+  * **Pencarian Karyawan:** Input teks pencarian untuk memfilter data karyawan berdasarkan nama, NRP, departemen, atau jabatan secara instan.
+  * **Modal Form CRUD:**
+    - Input NRP (Primary Key, hanya diisi saat insert), nama lengkap, departemen, dan jabatan.
+    - Input berkas gambar foto profil yang otomatis diunggah ke Supabase Storage (bucket `karyawan-foto`) dengan fallback input teks URL manual.
+    - Input dinamis tabel kompetensi: tombol "+ Tambah Baris" untuk menambahkan row baru, dan ikon sampah untuk menghapus baris.
+  - **Manajemen QR Code:** Klik tombol QR langsung di baris tabel untuk memunculkan modal QR Code karyawan tersebut secara instan tanpa berpindah halaman, lengkap dengan tombol untuk mencetak.
+
 ## 5. Security & Constraint Notes
 
-* **Supabase RLS:** Row Level Security diaktifkan pada tabel untuk Read-Only (SELECT) bagi public/anon key.
+* **Supabase RLS & Auth:**
+  * Tabel `karyawan` dan `karyawan_kompetensi` dikonfigurasi agar dapat dibaca secara bebas oleh publik/anon (`SELECT`), namun hanya dapat dimodifikasi (`ALL`/`INSERT`/`UPDATE`/`DELETE`) oleh pengguna yang terautentikasi (`authenticated`).
+* **Supabase Storage:**
+  * Bucket `karyawan-foto` diatur dengan akses **Public** agar URL gambar profil dapat langsung diakses oleh client, dan diatur dengan kebijakan RLS agar hanya pengguna terautentikasi yang dapat mengunggah file.
 * **CORS/Camera Access:** Scanner harus berjalan di atas HTTPS atau Localhost (127.0.0.1) agar API kamera browser diizinkan.
 * **Dynamic Binding:** Pastikan penulisan ID/Class di HTML konsisten agar manipulasi DOM di Vanilla JS dapat berjalan dengan akurat tanpa merusak elemen UI (seperti icon FontAwesome di dalamnya).
