@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate QR Code - KPP Mining</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- qrcode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#1b5e20',
+                            light: '#4c8c4a',
+                            dark: '#003300'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-brand-green text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="index.html" class="flex items-center space-x-2 hover:text-gray-200 transition">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="font-medium">Kembali</span>
+            </a>
+            <h1 class="text-xl font-bold">QR Generator</h1>
+            <div class="w-20"></div> <!-- Spacer -->
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-10 flex flex-col items-center">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-6 space-y-6">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-gray-800">Buat QR Code Karyawan</h2>
+                <p class="text-gray-500 text-sm mt-1">Masukkan NRP karyawan untuk membuat QR Code unik.</p>
+            </div>
+
+            <form id="qrForm" class="space-y-4">
+                <div>
+                    <label for="nrpInput" class="block text-sm font-medium text-gray-700">Nomor Registrasi Pekerja (NRP)</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-id-card text-gray-400"></i>
+                        </div>
+                        <input type="text" id="nrpInput" name="nrp" required
+                            class="focus:ring-brand-green focus:border-brand-green block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-3 border" 
+                            placeholder="Contoh: KB25024">
+                    </div>
+                </div>
+
+                <button type="submit" 
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-green hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green transition">
+                    Generate QR Code
+                </button>
+            </form>
+
+            <!-- QR Code Display Area -->
+            <div id="qrResultContainer" class="hidden flex-col items-center justify-center pt-6 border-t border-gray-100">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Hasil QR Code: <span id="displayNrp" class="font-bold text-brand-green"></span></h3>
+                <div id="qrcode" class="p-4 bg-white border-2 border-gray-100 rounded-lg shadow-sm"></div>
+                <div class="mt-4 flex space-x-2">
+                    <button id="downloadBtn" class="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-download mr-2"></i> Unduh
+                    </button>
+                    <a id="testLink" href="#" target="_blank" class="flex-1 text-center py-2 px-4 border border-brand-light rounded-md shadow-sm text-sm font-medium text-brand-green bg-green-50 hover:bg-green-100 transition">
+                        <i class="fa-solid fa-external-link-alt mr-2"></i> Tes Buka
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const qrForm = document.getElementById('qrForm');
+        const nrpInput = document.getElementById('nrpInput');
+        const qrResultContainer = document.getElementById('qrResultContainer');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const displayNrp = document.getElementById('displayNrp');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const testLink = document.getElementById('testLink');
+        
+        let qrCodeObj = null;
+
+        qrForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const nrp = nrpInput.value.trim().toUpperCase();
+            if (!nrp) return;
+
+            // Generate target URL
+            const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+            const targetUrl = `${baseUrl}/detail.html?nrp=${encodeURIComponent(nrp)}`;
+
+            // Clear previous QR Code if exists
+            qrcodeDiv.innerHTML = '';
+            
+            // Create new QR Code
+            qrCodeObj = new QRCode(qrcodeDiv, {
+                text: targetUrl,
+                width: 250,
+                height: 250,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+
+            // Update UI
+            displayNrp.textContent = nrp;
+            testLink.href = targetUrl;
+            qrResultContainer.classList.remove('hidden');
+            qrResultContainer.classList.add('flex');
+        });
+
+        // Download functionality
+        downloadBtn.addEventListener('click', function() {
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (canvas) {
+                const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+                const link = document.createElement('a');
+                link.download = `QR_${displayNrp.textContent}.png`;
+                link.href = image;
+                link.click();
+            } else {
+                // Sometime qrcode.js uses img tag depending on browser
+                const img = qrcodeDiv.querySelector('img');
+                if(img && img.src) {
+                    const link = document.createElement('a');
+                    link.download = `QR_${displayNrp.textContent}.png`;
+                    link.href = img.src;
+                    link.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

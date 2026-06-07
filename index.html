@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard KPP Mining - Sistem Profil & Kompetensi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#1b5e20',
+                            light: '#4c8c4a',
+                            dark: '#003300'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-brand-green text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-helmet-safety text-3xl"></i>
+                <h1 class="text-2xl font-bold tracking-tight">KPP Mining</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-12 flex flex-col items-center justify-center">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden text-center p-8 space-y-8">
+            <div>
+                <div class="mx-auto w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-users-gear text-4xl text-brand-green"></i>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-800 mb-2">Portal Karyawan</h2>
+                <p class="text-gray-500">Sistem Profil & Kompetensi Lapangan</p>
+            </div>
+
+            <div class="space-y-4 pt-4">
+                <a href="generate.html" class="group flex items-center justify-center w-full p-4 border border-transparent text-lg font-medium rounded-xl text-white bg-brand-green hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green transition-all duration-200 shadow-md">
+                    <i class="fa-solid fa-qrcode mr-3 group-hover:scale-110 transition-transform"></i>
+                    Buat QR Code
+                </a>
+                <a href="scanner.html" class="group flex items-center justify-center w-full p-4 border-2 border-brand-green text-lg font-medium rounded-xl text-brand-green bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green transition-all duration-200 shadow-sm">
+                    <i class="fa-solid fa-camera mr-3 group-hover:scale-110 transition-transform"></i>
+                    Scan QR Code
+                </a>
+            </div>
+            
+            <div class="pt-6 border-t border-gray-100">
+                <p class="text-sm text-gray-400">Pastikan kamera diizinkan saat menggunakan fitur scanner.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-300 py-6 text-center text-sm">
+        <p>&copy; <span id="year"></span> KPP Mining. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>

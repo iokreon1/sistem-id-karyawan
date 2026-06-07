@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner QR Code - KPP Mining</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html5-qrcode -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#1b5e20',
+                            light: '#4c8c4a',
+                            dark: '#003300'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #reader { width: 100%; border: none !important; }
+        #reader__dashboard_section_csr span { color: #1b5e20; font-weight: 600; }
+        #reader__dashboard_section_swaplink { color: #1b5e20; text-decoration: underline; margin-top: 10px; display: inline-block; }
+        #reader button { background-color: #1b5e20; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin: 5px; font-weight: 500;}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-brand-green text-white shadow-md z-10">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="index.html" class="flex items-center space-x-2 hover:text-gray-200 transition">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="font-medium">Kembali</span>
+            </a>
+            <h1 class="text-xl font-bold">QR Scanner</h1>
+            <div class="w-20"></div> <!-- Spacer -->
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-6 flex flex-col items-center">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-lg overflow-hidden flex flex-col">
+            
+            <div class="p-6 text-center border-b border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-expand text-brand-green mr-2"></i>Scan ID</h2>
+                <p class="text-gray-500 text-sm mt-1">Arahkan kamera ke QR Code karyawan</p>
+            </div>
+
+            <div class="p-4 relative bg-black flex-grow flex items-center justify-center min-h-[300px]">
+                <div id="reader" class="rounded-lg overflow-hidden"></div>
+                <!-- Scanning Overlay (Opsional) -->
+                <div id="scanOverlay" class="absolute inset-0 border-4 border-brand-green opacity-50 m-8 rounded-lg pointer-events-none hidden"></div>
+            </div>
+
+            <div id="resultBox" class="hidden p-4 bg-green-50 border-t border-green-200">
+                <div class="flex items-center text-brand-green">
+                    <i class="fa-solid fa-circle-check text-xl mr-3"></i>
+                    <div>
+                        <p class="text-sm font-bold">QR Code Ditemukan!</p>
+                        <p class="text-xs">Mengarahkan ke profil...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 text-center bg-gray-50">
+                <p class="text-xs text-gray-400">Izinkan akses kamera di browser Anda. Jika scanner tidak muncul, pastikan Anda menggunakan HTTPS.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const resultBox = document.getElementById('resultBox');
+            let isScanned = false;
+
+            // Inisialisasi instance langsung (bukan UI Wrapper)
+            const html5QrCode = new Html5Qrcode("reader");
+
+            function onScanSuccess(decodedText, decodedResult) {
+                if (isScanned) return;
+                isScanned = true;
+
+                // Tampilkan notifikasi berhasil
+                resultBox.classList.remove('hidden');
+
+                // Hentikan kamera
+                html5QrCode.stop().then(() => {
+                    console.log("Kamera dihentikan.");
+                }).catch(err => {
+                    console.error("Gagal menghentikan kamera", err);
+                });
+
+                // Redirect
+                setTimeout(() => {
+                    window.location.href = decodedText;
+                }, 1000);
+            }
+
+            // Konfigurasi deteksi yang lebih optimal
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 }
+                // Menghapus aspectRatio agar gambar tidak distorsi di HP
+            };
+
+            // Mulai langsung dengan kamera belakang (environment)
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                console.warn("Kamera belakang tidak ditemukan, mencoba kamera depan/default...", err);
+                // Fallback jika tidak ada kamera belakang (misal di laptop)
+                html5QrCode.start({ facingMode: "user" }, config, onScanSuccess)
+                .catch(err2 => {
+                    console.error("Gagal memulai kamera mana pun.", err2);
+                    alert("Gagal mengakses kamera. Pastikan browser mengizinkan akses kamera.");
+                });
+            });
+        });
+    </script>
+</body>
+</html>
