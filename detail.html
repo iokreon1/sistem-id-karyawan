@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -25,14 +26,17 @@
                         }
                     },
                     fontFamily: {
-                        sans: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                        sans: ['Inter', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
         .skeleton {
             background: #eee;
             background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
@@ -40,31 +44,38 @@
             background-size: 200% 100%;
             animation: 1.5s shine linear infinite;
         }
+
         @keyframes shine {
-            to { background-position-x: -200%; }
+            to {
+                background-position-x: -200%;
+            }
         }
-        
+
         /* Stylized print optimization */
         @media print {
             body {
                 background-color: white !important;
                 padding-bottom: 0 !important;
             }
+
             main {
                 padding-top: 0 !important;
             }
         }
     </style>
 </head>
+
 <body class="bg-[#f8f9fa] min-h-screen pb-12">
     <!-- Header/Navigation Bar (Hidden during Print) -->
     <header class="bg-white/80 backdrop-blur-md text-slate-800 border-b border-gray-200 sticky top-0 z-50 print:hidden">
         <div class="container mx-auto px-4 py-3 flex items-center justify-between max-w-lg">
-            <a href="index.html" class="flex items-center space-x-2 text-slate-600 hover:text-brand-green font-medium transition">
+            <a href="index.html"
+                class="flex items-center space-x-2 text-slate-600 hover:text-brand-green font-medium transition">
                 <i class="fa-solid fa-house"></i>
                 <span class="text-sm font-semibold">Home</span>
             </a>
-            <button onclick="window.print()" class="text-slate-600 hover:text-brand-green font-medium transition flex items-center space-x-1.5">
+            <button onclick="window.print()"
+                class="text-slate-600 hover:text-brand-green font-medium transition flex items-center space-x-1.5">
                 <i class="fa-solid fa-print"></i>
                 <span class="text-sm font-semibold">Cetak</span>
             </button>
@@ -73,7 +84,7 @@
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-6 max-w-lg">
-        
+
         <!-- Loading State -->
         <div id="loadingState" class="space-y-6">
             <div class="flex flex-col items-center gap-4">
@@ -88,33 +99,39 @@
         </div>
 
         <!-- Error State -->
-        <div id="errorState" class="hidden bg-white rounded-xl shadow-sm p-8 text-center space-y-4 border border-gray-200">
+        <div id="errorState"
+            class="hidden bg-white rounded-xl shadow-sm p-8 text-center space-y-4 border border-gray-200">
             <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
                 <i class="fa-solid fa-circle-exclamation text-4xl"></i>
             </div>
             <h2 class="text-xl font-bold text-gray-800">Data Tidak Ditemukan</h2>
             <p id="errorMessage" class="text-gray-500">NRP karyawan tidak valid atau tidak terdaftar dalam sistem.</p>
             <div class="pt-4 flex justify-center space-x-3 print:hidden">
-                <a href="index.html" class="px-6 py-2 bg-gray-500 text-white rounded-md font-medium hover:bg-gray-600 transition">Kembali</a>
-                <a href="scanner.html" class="px-6 py-2 bg-brand-green text-white rounded-md font-medium hover:bg-brand-dark transition">Scan Ulang</a>
+                <a href="index.html"
+                    class="px-6 py-2 bg-gray-500 text-white rounded-md font-medium hover:bg-gray-600 transition">Kembali</a>
+                <a href="scanner.html"
+                    class="px-6 py-2 bg-brand-green text-white rounded-md font-medium hover:bg-brand-dark transition">Scan
+                    Ulang</a>
             </div>
         </div>
 
         <!-- Data Content -->
         <div id="dataContent" class="hidden space-y-6">
-            
+
             <!-- Header Logo & Title (Matching Screenshot) -->
             <div class="flex flex-col items-center justify-center pt-2 pb-4 select-none">
                 <!-- KPP Green stylized logo -->
                 <div class="flex items-center justify-center relative">
-                    <img src="https://xcsobgalvnsqffdzflrf.supabase.co/storage/v1/object/public/karyawan-foto/logoKpp.jpeg" alt="Logo KPP" class="h-16 w-auto object-contain">
+                    <img src="https://xcsobgalvnsqffdzflrf.supabase.co/storage/v1/object/public/karyawan-foto/logoKpp.jpeg"
+                        alt="Logo KPP" class="h-16 w-auto object-contain">
                 </div>
                 <h2 class="text-3xl font-extrabold text-[#111827] tracking-tight mt-2">Detail Karyawan</h2>
             </div>
 
             <!-- Employee Photo (Centered, rectangular vertical) -->
             <div class="flex justify-center mb-6">
-                <img id="profilFoto" src="" alt="Foto Profil" class="w-36 h-48 object-cover border border-gray-300 shadow-sm bg-white">
+                <img id="profilFoto" src="" alt="Foto Profil"
+                    class="w-36 h-48 object-cover border border-gray-300 shadow-sm bg-white">
             </div>
 
             <!-- Profile Info Table -->
@@ -122,31 +139,45 @@
                 <table class="w-full border-collapse text-left text-sm text-gray-800">
                     <tbody class="divide-y divide-gray-300">
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Nama</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Nama</td>
                             <td id="profilNama" class="p-3.5 font-bold text-gray-900 uppercase">Nama Karyawan</td>
                         </tr>
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">NRP</td>
-                            <td id="profilNrp" class="p-3.5 font-bold text-gray-900 uppercase">NRP</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                NRP</td>
+                            <td id="profilNrp" class="p-3.5 font-bold text-gray-900 font-mono uppercase">NRP</td>
                         </tr>
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Jabatan</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Jabatan</td>
                             <td id="profilJabatan" class="p-3.5 font-bold text-gray-900 uppercase">Jabatan</td>
                         </tr>
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Grade</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Grade</td>
                             <td id="profilGrade" class="p-3.5 font-bold text-gray-900 uppercase">Grade</td>
                         </tr>
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Departemen</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Departemen</td>
                             <td id="profilDept" class="p-3.5 font-bold text-gray-900 uppercase">Departemen</td>
                         </tr>
                         <tr class="align-middle">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Perusahaan</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Perusahaan</td>
                             <td id="profilPerusahaan" class="p-3.5 font-bold text-gray-900 uppercase">Perusahaan</td>
                         </tr>
                         <tr class="align-top">
-                            <td class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">Sertifikasi Kompetensi</td>
+                            <td
+                                class="w-[38%] bg-gray-50/50 p-3.5 font-semibold text-gray-600 border-r border-gray-300">
+                                Sertifikasi Kompetensi</td>
                             <td class="p-3.5 text-gray-950 font-bold">
                                 <ul id="kompetensiList" class="list-disc pl-5 space-y-1.5">
                                     <!-- List items will be populated by JS -->
@@ -159,7 +190,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
         </div>
     </main>
 
@@ -189,7 +220,7 @@
                     .single();
 
                 if (error) throw error;
-                
+
                 if (data) {
                     renderData(data);
                 } else {
@@ -198,7 +229,7 @@
 
             } catch (err) {
                 console.error("Error fetching data:", err);
-                
+
                 if (err.code === "PGRST116") {
                     showError("NRP tersebut belum terdaftar di database Supabase, atau Row Level Security (RLS) di tabel menghalangi akses publik.");
                 } else {
@@ -210,7 +241,7 @@
         function showError(msg) {
             document.getElementById('loadingState').classList.add('hidden');
             document.getElementById('errorState').classList.remove('hidden');
-            if(msg) document.getElementById('errorMessage').textContent = msg;
+            if (msg) document.getElementById('errorMessage').textContent = msg;
         }
 
         function renderData(data) {
@@ -225,7 +256,7 @@
             document.getElementById('profilJabatan').textContent = data.jabatan || '-';
             document.getElementById('profilGrade').textContent = data.grade || '-';
             document.getElementById('profilPerusahaan').textContent = data.perusahaan || '-';
-            
+
             // Handle foto
             const fotoUrl = data.foto ? data.foto : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nama_lengkap || 'User')}&background=1b5e20&color=fff&size=200`;
             document.getElementById('profilFoto').src = fotoUrl;
@@ -238,16 +269,16 @@
             if (data.karyawan_kompetensi && data.karyawan_kompetensi.length > 0) {
                 emptyState.classList.add('hidden');
                 listContainer.classList.remove('hidden');
-                
+
                 data.karyawan_kompetensi.forEach(komp => {
                     const li = document.createElement('li');
                     li.className = "leading-relaxed text-sm";
-                    
+
                     let text = komp.nama_unit || '-';
                     if (komp.masa_berlaku && komp.masa_berlaku !== '-') {
                         text += `: ${komp.masa_berlaku}`;
                     }
-                    
+
                     li.textContent = text;
                     listContainer.appendChild(li);
                 });
@@ -258,4 +289,5 @@
         }
     </script>
 </body>
+
 </html>
